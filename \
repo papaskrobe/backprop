@@ -1,0 +1,92 @@
+require "./backprop/*"
+require "yaml"
+require "../lib/matrix/src/matrix.cr"
+
+module Backprop
+	def sigmoid(val : Float64)
+		return 1.0 / (1.0 + (2.71828 ** (-val)))
+	end
+
+	def sigmoid(val : Int32)
+		return 1.0 / (1.0 + (2.71828 ** (-(val.to_f))))
+	end
+
+	def sigmoid(val : Matrix(Float64))
+		out_matrix = Matrix.new(val.rows.size, val.columns.size) {0.0}
+		(val.rows.size * val.columns.size).times do |x|
+			out_matrix[x] = sigmoid(val[x])
+		end
+		out_matrix
+	end
+
+	def generate(rows, cols, epsilon)
+		return Matrix.new(rows, cols) { (rand * 2 * epsilon) - epsilon }
+	end
+
+	def bias(matrix)
+		return Matrix.rows([matrix.to_a.unshift(1.0)])
+	end
+
+	def total_error(target : Array(Float64), net_out : Array(Float64))
+		diffs = target.clone
+		diffs.size.times { |x| diffs[x] = 0.5 * ((diffs[x] - net_out[x]) ** 2) }
+		return diffs.sum
+	end
+
+class Trainer
+
+	def initialize(data : Array(Int32|Float64|String), outputs : Int32)
+		@data = [] of Float64
+		@data = data[0...(data.size - outputs)].map { |x| x.to_f64 }
+		@outputs = [] of Float64
+		@
+	end
+
+end
+
+
+class Backprop
+
+	def initialize(layers : Array(Int32), alpha = 0.5)
+		@learning_rate = alpha
+		@weights = [] of Matrix(Float64)
+		@layers = [] of Matrix(Float64)
+		(layers.size - 1).times do |x|
+			@weights.push generate(layers[x] + 1, layers[x + 1], 1)
+		end
+	end
+	
+	def weights
+		return @weights
+	end
+	def layers
+		return @layers
+	end
+	
+	def load_weights(file_name)
+		new_wts = YAML.parse(File.read(file_name))
+		@weights = new_wts.to_a.map { |mats| Matrix.rows(mats.to_a.map { |row| row.to_a.map { |val| val.to_s.chomp.to_f } } ) }
+	end
+
+	def save_weights(file_name)
+		File.write(file_name, @weights.map { |x| x.rows }.to_yaml)
+	end
+	
+	def forward_calc(input_layer : Matrix(Float64))
+		layer = input_layer
+		@layers = [] of Matrix(Float64)
+		@weights.each do |x|
+			layer = sigmoid(bias(layer) * x)
+			@layers.push(layer)
+		end
+		return layer
+	end
+
+end #of class Backprop
+
+end #of module Backprop
+
+include Backprop
+back = Backprop::Backprop.new([2, 3, 2])
+back.forward_calc(Matrix.rows([[0.0,1.0]]))
+puts back.layers[-1].rows[0]
